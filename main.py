@@ -1,5 +1,26 @@
+from ruamel import yaml
 from scapy.all import *
 from binascii import hexlify
+import ruamel.yaml
+
+
+# yaml format
+# https://yaml.readthedocs.io/en/latest/dumpcls.html
+class Packet:
+    yaml_tag = u'tag:yaml.org,2002:map'
+
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+
+    @classmethod
+    def to_yaml(cls, representer, node):
+        return representer.represent_mapping(cls.yaml_tag, node.kwargs)
+
+    @classmethod
+    def from_yaml(cls, constructor, node):
+        # return cls(*node.value.split('-'))
+        data = constructor.construct_mapping(node, deep=True)
+        return cls(**data)
 
 
 def printPid(hex_pck):
@@ -42,10 +63,12 @@ def listOfFrames():
 
     for frame_num, pck in enumerate(file, start=0):
 
-        print(f"frame_number: {frame_num}")
-        print(f"len_frame_pcap: {len(pck)}")
-        # +4 because of FCS
-        print(f"len_frame_medium: {max(64, len(pck) + 4)}")
+        pck_data = Packet(
+            frame_number=frame_num,
+            len_frame_pcap=len(pck),
+            # +4 because of FCS
+            len_frame_medium=max(64, len(pck) + 4)
+        )
 
         # transform code to raw data of wireshark
         # hexlify bytes and convert them to the string
@@ -77,8 +100,20 @@ def listOfFrames():
         elif pid:
             printPid(hex_pck)
 
-        print(f"hexa_frame: | \n{printHexData(hex_pck)}\n")
+        # print(f"hexa_frame: | \n{printHexData(hex_pck)}\n")
+        # 'hexa_frame': ruamel.yaml.scalaring.LiteralScalarString(printHexData(hex_pck))
 
 
 if __name__ == '__main__':
     listOfFrames()
+
+    pck_data = Packet(
+        frame_number=1,
+        frame_type='ETHERNET II',
+        src_mac='00:02:CF:AB:A2:4C',
+        dst_mac='B4:B5:2F:74:CB:AE'
+    )
+
+    yaml = ruamel.yaml.YAML()
+    yaml.register_class(Packet)
+    yaml.dump([pck_data], sys.stdout)
