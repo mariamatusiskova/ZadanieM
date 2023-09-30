@@ -5,14 +5,17 @@ from binascii import hexlify
 import ruamel.yaml
 
 
-# yaml format
+# yaml format through the class
 # https://yaml.readthedocs.io/en/latest/dumpcls.html
 class Packet:
+    # tag for remove the '!'
     yaml_tag = u'tag:yaml.org,2002:map'
 
+    #kwargs for various length of properties
     def __init__(self, **kwargs):
         self.kwargs = kwargs
 
+    # data to yaml
     @classmethod
     def to_yaml(cls, representer, node):
         for key, value in list(node.kwargs.items()):
@@ -22,11 +25,10 @@ class Packet:
 
     @classmethod
     def from_yaml(cls, constructor, node):
-        # return cls(*node.value.split('-'))
         data = constructor.construct_mapping(node, deep=True)
         return cls(**data)
 
-
+# find correct protocol for IEEE 802.3 LLC & SNAP
 def findPid(hex_pck):
     if int(hex_pck[40:44], 16) == 0x2000:
         return 'CDP'
@@ -37,7 +39,7 @@ def findPid(hex_pck):
     elif int(hex_pck[40:44], 16) == 0x809B:
         return 'AppleTalk'
 
-
+# find correct protocol IEEE 802.3 LLC
 def findSap(hex_pck):
     if int(hex_pck[28:30], 16) == 0x42:
         return 'STP'
@@ -46,7 +48,7 @@ def findSap(hex_pck):
     elif int(hex_pck[28:30], 16) == 0xF0:
         return 'NETBIOS'
 
-
+# transform to hex data of the packet
 def printHexData(hex_pck):
     hex_data = ""
     num_pairs = 0
@@ -61,9 +63,8 @@ def printHexData(hex_pck):
 
     return hex_data.upper().strip()
 
-
+# list frames into yaml, main logic
 def listOfFrames(file_name):
-
     file = rdpcap('../vzorky_pcap_na_analyzu/' + file_name)
 
     pck_list = []
@@ -74,6 +75,8 @@ def listOfFrames(file_name):
         # transform code to raw data of wireshark
         # hexlify bytes and convert them to the string
         hex_pck = hexlify(bytes(pck)).decode('utf-8')
+
+        if (hex_pck[0:12])
 
         sap_value = None
         pid_value = None
@@ -106,7 +109,7 @@ def listOfFrames(file_name):
         yaml_format.register_class(Packet)
         pck_list.append(pck_data)
 
-    begin = {
+    header = {
         "name": "PKS2023/24",
         "pcap_name": file_name,
         "packets": pck_list
@@ -114,7 +117,7 @@ def listOfFrames(file_name):
 
     with open('yaml_file.yaml', 'w') as yaml_file:
         yaml_format.indent(offset=2, sequence=4)
-        yaml_format.dump(begin, yaml_file)
+        yaml_format.dump(header, yaml_file)
 
     with open('yaml_file.yaml', 'r') as f:
         content = f.read()
@@ -124,4 +127,4 @@ def listOfFrames(file_name):
 
 
 if __name__ == '__main__':
-    listOfFrames('trace-26.pcap')
+    listOfFrames('trace-27.pcap')
