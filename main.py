@@ -53,13 +53,13 @@ def printHexData(hex_pck):
     for i in range(0, len(hex_pck), 2):
         hex_data += hex_pck[i] + hex_pck[i + 1]
         num_pairs += 1
-        if num_pairs < 15:
+        if num_pairs < 16:
             hex_data += " "
-        if num_pairs == 15:
+        if num_pairs == 16:
             num_pairs = 0
             hex_data += "\n"
 
-    return hex_data.upper()
+    return hex_data.upper().strip()
 
 
 def listOfFrames(file_name):
