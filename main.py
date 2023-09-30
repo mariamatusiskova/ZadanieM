@@ -52,10 +52,9 @@ def printHexData(hex_pck):
     num_pairs = 0
     for i in range(0, len(hex_pck), 2):
         hex_data += hex_pck[i] + hex_pck[i + 1]
-        #num_pairs += 1
+        num_pairs += 1
         if num_pairs < 15:
             hex_data += " "
-        num_pairs += 1
         if num_pairs == 15:
             num_pairs = 0
             hex_data += "\n"
@@ -113,13 +112,14 @@ def listOfFrames(file_name):
         "packets": pck_list
     }
 
-    with open('yaml_file.yml', 'w') as yaml_file:
+    with open('yaml_file.yaml', 'w') as yaml_file:
+        yaml_format.indent(offset=2, sequence=4)
         yaml_format.dump(begin, yaml_file)
 
-    with open('yaml_file.yml', 'r') as f:
+    with open('yaml_file.yaml', 'r') as f:
         content = f.read()
     content = content.replace("|-\n", "|\n")
-    with open('yaml_file.yml', 'w') as f:
+    with open('yaml_file.yaml', 'w') as f:
         f.write(content)
 
 
