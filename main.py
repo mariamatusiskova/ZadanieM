@@ -52,88 +52,76 @@ def printHexData(hex_pck):
     num_pairs = 0
     for i in range(0, len(hex_pck), 2):
         hex_data += hex_pck[i] + hex_pck[i + 1]
-        num_pairs += 1
+        #num_pairs += 1
         if num_pairs < 15:
             hex_data += " "
+        num_pairs += 1
         if num_pairs == 15:
             num_pairs = 0
             hex_data += "\n"
 
-
     return hex_data.upper()
 
 
-def listOfFrames():
-    file = rdpcap('../vzorky_pcap_na_analyzu/trace-26.pcap')
+def listOfFrames(file_name):
 
-    # Initialize the begin dictionary
+    file = rdpcap('../vzorky_pcap_na_analyzu/' + file_name)
+
+    pck_list = []
+    yaml_format = ruamel.yaml.YAML()
+
+    for frame_num, pck in enumerate(file, start=0):
+
+        # transform code to raw data of wireshark
+        # hexlify bytes and convert them to the string
+        hex_pck = hexlify(bytes(pck)).decode('utf-8')
+
+        sap_value = None
+        pid_value = None
+
+        if int(hex_pck[24:28], 16) >= 0x5DC:
+            define_frame_type = 'Ethernet II'
+        else:
+            if int(hex_pck[28:32], 16) == 0xFFFF:
+                define_frame_type = 'IEEE 802.3 RAW'
+            elif int(hex_pck[28:32], 16) == 0xAAAA:
+                define_frame_type = 'IEEE 802.3 LLC & SNAP'
+                pid_value = findPid(hex_pck)
+            else:
+                define_frame_type = 'IEEE 802.3 LLC'
+                sap_value = findSap(hex_pck)
+
+        pck_data = Packet(
+            frame_number=frame_num,
+            len_frame_pcap=len(pck),
+            # +4 because of FCS
+            len_frame_medium=max(64, len(pck) + 4),
+            frame_type=define_frame_type,
+            src_mac=':'.join(hex_pck[:12][i:i + 2] for i in range(0, len(hex_pck[:12]), 2)),
+            dst_mac=':'.join(hex_pck[12:24][i:i + 2] for i in range(0, len(hex_pck[12:24]), 2)),
+            sap=sap_value,
+            pid=pid_value,
+            hexa_frame=scalarstring.PreservedScalarString(printHexData(hex_pck))
+        )
+
+        yaml_format.register_class(Packet)
+        pck_list.append(pck_data)
+
     begin = {
         "name": "PKS2023/24",
-        "pcap_name": "eth-1.pcap",
-        "packets": []
+        "pcap_name": file_name,
+        "packets": pck_list
     }
 
-    # Open the YAML file in write mode
     with open('yaml_file.yml', 'w') as yaml_file:
-        # Write the begin dictionary at the beginning of the file
-        yaml = ruamel.yaml.YAML()
-        yaml.dump(begin, yaml_file)
+        yaml_format.dump(begin, yaml_file)
 
-    with open('yaml_file.yml', 'a') as yaml_file:
-
-        for frame_num, pck in enumerate(file, start=0):
-
-            # transform code to raw data of wireshark
-            # hexlify bytes and convert them to the string
-            hex_pck = hexlify(bytes(pck)).decode('utf-8')
-
-            sap_value = None
-            pid_value = None
-
-            if int(hex_pck[24:28], 16) >= 0x5DC:
-                define_frame_type = 'Ethernet II'
-            else:
-                if int(hex_pck[28:32], 16) == 0xFFFF:
-                    define_frame_type = 'IEEE 802.3 RAW'
-                elif int(hex_pck[28:32], 16) == 0xAAAA:
-                    define_frame_type = 'IEEE 802.3 LLC & SNAP'
-                    pid_value = findPid(hex_pck)
-                else:
-                    define_frame_type = 'IEEE 802.3 LLC'
-                    sap_value = findSap(hex_pck)
-
-            pck_data = Packet(
-                frame_number=frame_num,
-                len_frame_pcap=len(pck),
-                # +4 because of FCS
-                len_frame_medium=max(64, len(pck) + 4),
-                frame_type=define_frame_type,
-                src_mac=':'.join(hex_pck[:12][i:i + 2] for i in range(0, len(hex_pck[:12]), 2)),
-                dst_mac=':'.join(hex_pck[12:24][i:i + 2] for i in range(0, len(hex_pck[12:24]), 2)),
-                sap=sap_value,
-                pid=pid_value,
-                hexa_frame=scalarstring.PreservedScalarString(printHexData(hex_pck))
-            )
-
-            # yaml_format = ruamel.yaml.YAML()
-            # yaml_format.register_class(Packet)
-            # yaml_format.dump([pck_data], yaml_file)
-            yaml_format = ruamel.yaml.YAML()
-            yaml_format.register_class(Packet)
-            begin["packets"].append(pck_data)
-
-            # Rewrite the entire YAML file with the updated begin dictionary
-            yaml_format.dump(begin, yaml_file)
-
-
-
-    # with open(r'yaml_file.yml', 'w') as yaml_file:
-    #     yaml.dump(begin, yaml_file, default_flow_style=False)
-    #     #yaml_format.dump([pck_data], sys.stdout)
-
-        # print(f"hexa_frame: | \n{printHexData(hex_pck)}\n")
-        # 'hexa_frame': ruamel.yaml.scalaring.LiteralScalarString(printHexData(hex_pck))
+    with open('yaml_file.yml', 'r') as f:
+        content = f.read()
+    content = content.replace("|-\n", "|\n")
+    with open('yaml_file.yml', 'w') as f:
+        f.write(content)
 
 
 if __name__ == '__main__':
-    listOfFrames()
+    listOfFrames('trace-26.pcap')
