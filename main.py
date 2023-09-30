@@ -76,8 +76,6 @@ def listOfFrames(file_name):
         # hexlify bytes and convert them to the string
         hex_pck = hexlify(bytes(pck)).decode('utf-8')
 
-        if (hex_pck[0:12])
-
         sap_value = None
         pid_value = None
 
