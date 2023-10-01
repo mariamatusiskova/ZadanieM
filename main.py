@@ -28,6 +28,7 @@ class Packet:
         data = constructor.construct_mapping(node, deep=True)
         return cls(**data)
 
+
 # find correct protocol for IEEE 802.3 LLC & SNAP
 def findPid(hex_pck):
     if int(hex_pck[40:44], 16) == 0x2000:
@@ -39,14 +40,16 @@ def findPid(hex_pck):
     elif int(hex_pck[40:44], 16) == 0x809B:
         return 'AppleTalk'
 
+
 # find correct protocol IEEE 802.3 LLC
 def findSap(hex_pck):
-    if int(hex_pck[28:30], 16) == 0x42:
+    if int(hex_pck[28:33], 16) == 0x4242:
         return 'STP'
-    elif int(hex_pck[28:30], 16) == 0xE0:
+    elif int(hex_pck[28:33], 16) == 0xE0E0:
         return 'IPX'
-    elif int(hex_pck[28:30], 16) == 0xF0:
+    elif int(hex_pck[28:33], 16) == 0xF0F0:
         return 'NETBIOS'
+
 
 # transform to hex data of the packet
 def printHexData(hex_pck):
@@ -63,6 +66,17 @@ def printHexData(hex_pck):
 
     return hex_data.upper().strip()
 
+
+# Inter-Switch Link, VLAN protocol
+def checkISLHeader(hex_pck):
+    # destination address DA
+    if int(hex_pck[0:10], 16) == 0x01000C0000 or int(hex_pck[0:10], 16) == 0x03000C0000:
+        new_hex_pck = hex_pck[52:]
+        return new_hex_pck
+    else:
+        return hex_pck
+
+
 # list frames into yaml, main logic
 def listOfFrames(file_name):
     file = rdpcap('../vzorky_pcap_na_analyzu/' + file_name)
@@ -75,6 +89,8 @@ def listOfFrames(file_name):
         # transform code to raw data of wireshark
         # hexlify bytes and convert them to the string
         hex_pck = hexlify(bytes(pck)).decode('utf-8')
+
+        hex_pck = checkISLHeader(hex_pck)
 
         sap_value = None
         pid_value = None
