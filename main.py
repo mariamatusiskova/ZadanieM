@@ -11,7 +11,7 @@ class Packet:
     # tag for remove the '!'
     yaml_tag = u'tag:yaml.org,2002:map'
 
-    #kwargs for various length of properties
+    # kwargs for various length of properties
     def __init__(self, **kwargs):
         self.kwargs = kwargs
 
@@ -39,6 +39,8 @@ def findPid(hex_pck):
         return 'PVSTP+'
     elif int(hex_pck[40:44], 16) == 0x809B:
         return 'AppleTalk'
+    else:
+        return 'Unknown protocol'
 
 
 # find correct protocol IEEE 802.3 LLC
@@ -49,6 +51,8 @@ def findSap(hex_pck):
         return 'IPX'
     elif int(hex_pck[28:33], 16) == 0xF0F0:
         return 'NETBIOS'
+    else:
+        return 'Unknown protocol'
 
 
 # transform to hex data of the packet
@@ -107,6 +111,7 @@ def listOfFrames(file_name):
                 define_frame_type = 'IEEE 802.3 LLC'
                 sap_value = findSap(hex_pck)
 
+        # sending data of packet to object
         pck_data = Packet(
             frame_number=frame_num,
             len_frame_pcap=len(pck),
@@ -123,16 +128,19 @@ def listOfFrames(file_name):
         yaml_format.register_class(Packet)
         pck_list.append(pck_data)
 
+    # data
     header = {
         "name": "PKS2023/24",
         "pcap_name": file_name,
         "packets": pck_list
     }
 
+    # write to the file all data
     with open('yaml_file.yaml', 'w') as yaml_file:
         yaml_format.indent(offset=2, sequence=4)
         yaml_format.dump(header, yaml_file)
 
+    # replace '|-' to '|'
     with open('yaml_file.yaml', 'r') as f:
         content = f.read()
     content = content.replace("|-\n", "|\n")
