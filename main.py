@@ -71,7 +71,7 @@ def findSap(hex_pck):
         elif int(hex_pck[28:30], 16) == 0x8E:
             return 'PROWAY (IEC 955) Active Station List Maintenance'
         elif int(hex_pck[28:30], 16) == 0xF4:
-            return 'LAN Managemennt'
+            return 'LAN Management'
         elif int(hex_pck[28:30], 16) == 0xFE:
             return 'ISO Network Layer Protocols'
         else:

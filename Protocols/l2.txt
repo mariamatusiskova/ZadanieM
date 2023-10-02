@@ -1,0 +1,14 @@
+42=STP
+E0=IPX
+F0=NETBIOS
+00=Null SAP
+02=LLC Sublayer Management/Individual
+03=LLC Sublayer Management/Group
+06=IP (DoD Internet Protocol)
+0E=PROWAY (IEC 955) Network Management, Maintenance and Installation
+4E=MMS
+5E=ISI IP
+7E=X.25 PLP (ISO 8208)
+8E=PROWAY (IEC 955) Active Station List Maintenance
+F4=LAN Management
+FE=ISO Network Layer Protocols
