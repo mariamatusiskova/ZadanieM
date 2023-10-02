@@ -143,8 +143,8 @@ def listOfFrames(file_name):
             # +4 because of FCS
             len_frame_medium=max(64, len(pck) + 4),
             frame_type=define_frame_type,
-            src_mac=':'.join(hex_pck[:12][i:i + 2] for i in range(0, len(hex_pck[:12]), 2)),
-            dst_mac=':'.join(hex_pck[12:24][i:i + 2] for i in range(0, len(hex_pck[12:24]), 2)),
+            src_mac=':'.join(hex_pck[12:24][i:i + 2] for i in range(0, len(hex_pck[12:24]), 2)),
+            dst_mac=':'.join(hex_pck[:12][i:i + 2] for i in range(0, len(hex_pck[:12]), 2)),
             sap=sap_value,
             pid=pid_value,
             hexa_frame=scalarstring.PreservedScalarString(printHexData(hex_pck))
