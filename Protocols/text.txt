@@ -1,0 +1,45 @@
+42=STP
+e0=IPX
+f0=NETBIOS
+00=Null SAP
+02=LLC Sublayer Management/Individual
+03=LLC Sublayer Management/Group
+06=IP
+0e=PROWAY (IEC 955) Network Management, Maintenance and Installation
+4e=MMS
+5e=ISI IP
+7e=X.25 PLP
+8e=PROWAY (IEC 955) Active Station List Maintenance
+f4=LAN Managemennt
+fe=ISO Network Layer Protocols
+
+        if int(hex_pck[28:30], 16) == 0x42:
+            return 'STP'
+        elif int(hex_pck[28:30], 16) == 0xE0:
+            return 'IPX'
+        elif int(hex_pck[28:30], 16) == 0xF0:
+            return 'NETBIOS'
+        elif int(hex_pck[28:30], 16) == 0x00:
+            return 'Null SAP'
+        elif int(hex_pck[28:30], 16) == 0x02:
+            return 'LLC Sublayer Management/Individual'
+        elif int(hex_pck[28:30], 16) == 0x03:
+            return 'IP (DoD Internet Protocol)'
+        elif int(hex_pck[28:30], 16) == 0x06:
+            return 'LLC Sublayer Management/Individual'
+        elif int(hex_pck[28:30], 16) == 0x0E:
+            return 'PROWAY (IEC 955) Network Management, Maintenance and Installation'
+        elif int(hex_pck[28:30], 16) == 0x4E:
+            return 'MMS'
+        elif int(hex_pck[28:30], 16) == 0x5E:
+            return 'ISI IP'
+        elif int(hex_pck[28:30], 16) == 0x7E:
+            return 'X.25 PLP (ISO 8208)'
+        elif int(hex_pck[28:30], 16) == 0x8E:
+            return 'PROWAY (IEC 955) Active Station List Maintenance'
+        elif int(hex_pck[28:30], 16) == 0xF4:
+            return 'LAN Managemennt'
+        elif int(hex_pck[28:30], 16) == 0xFE:
+            return 'ISO Network Layer Protocols'
+        else:
+            return 'Unknown protocol'

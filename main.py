@@ -57,9 +57,9 @@ def findSap(hex_pck):
         elif int(hex_pck[28:30], 16) == 0x02:
             return 'LLC Sublayer Management/Individual'
         elif int(hex_pck[28:30], 16) == 0x03:
-            return 'IP (DoD Internet Protocol)'
+            return 'LLC Sublayer Management/Group'
         elif int(hex_pck[28:30], 16) == 0x06:
-            return 'LLC Sublayer Management/Individual'
+            return 'IP (DoD Internet Protocol)'
         elif int(hex_pck[28:30], 16) == 0x0E:
             return 'PROWAY (IEC 955) Network Management, Maintenance and Installation'
         elif int(hex_pck[28:30], 16) == 0x4E:
