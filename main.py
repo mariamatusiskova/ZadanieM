@@ -45,12 +45,37 @@ def findPid(hex_pck):
 
 # find correct protocol IEEE 802.3 LLC
 def findSap(hex_pck):
-    if int(hex_pck[28:33], 16) == 0x4242:
-        return 'STP'
-    elif int(hex_pck[28:33], 16) == 0xE0E0:
-        return 'IPX'
-    elif int(hex_pck[28:33], 16) == 0xF0F0:
-        return 'NETBIOS'
+    if int(hex_pck[28:30], 16) == int(hex_pck[30:32], 16):
+        if int(hex_pck[28:30], 16) == 0x42:
+            return 'STP'
+        elif int(hex_pck[28:30], 16) == 0xE0:
+            return 'IPX'
+        elif int(hex_pck[28:30], 16) == 0xF0:
+            return 'NETBIOS'
+        elif int(hex_pck[28:30], 16) == 0x00:
+            return 'Null SAP'
+        elif int(hex_pck[28:30], 16) == 0x02:
+            return 'LLC Sublayer Management/Individual'
+        elif int(hex_pck[28:30], 16) == 0x03:
+            return 'IP (DoD Internet Protocol)'
+        elif int(hex_pck[28:30], 16) == 0x06:
+            return 'LLC Sublayer Management/Individual'
+        elif int(hex_pck[28:30], 16) == 0x0E:
+            return 'PROWAY (IEC 955) Network Management, Maintenance and Installation'
+        elif int(hex_pck[28:30], 16) == 0x4E:
+            return 'MMS'
+        elif int(hex_pck[28:30], 16) == 0x5E:
+            return 'ISI IP'
+        elif int(hex_pck[28:30], 16) == 0x7E:
+            return 'X.25 PLP (ISO 8208)'
+        elif int(hex_pck[28:30], 16) == 0x8E:
+            return 'PROWAY (IEC 955) Active Station List Maintenance'
+        elif int(hex_pck[28:30], 16) == 0xF4:
+            return 'LAN Managemennt'
+        elif int(hex_pck[28:30], 16) == 0xFE:
+            return 'ISO Network Layer Protocols'
+        else:
+            return 'Unknown protocol'
     else:
         return 'Unknown protocol'
 
@@ -149,4 +174,4 @@ def listOfFrames(file_name):
 
 
 if __name__ == '__main__':
-    listOfFrames('trace-27.pcap')
+    listOfFrames('trace-25.pcap')
