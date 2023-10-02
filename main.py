@@ -31,49 +31,31 @@ class Packet:
 
 # find correct protocol for IEEE 802.3 LLC & SNAP
 def findPid(hex_pck):
-    if int(hex_pck[40:44], 16) == 0x2000:
-        return 'CDP'
-    elif int(hex_pck[40:44], 16) == 0x2004:
-        return 'DTP'
-    elif int(hex_pck[40:44], 16) == 0x010B:
-        return 'PVSTP+'
-    elif int(hex_pck[40:44], 16) == 0x809B:
-        return 'AppleTalk'
-    else:
-        return 'Unknown protocol'
+    # https://www.tutorialspoint.com/How-to-create-a-Python-dictionary-from-text-file
+    pid_dict = {}
+    with open("Protocols/l3.txt") as file:
+        for line in file:
+            (hexa, value) = line.split("=")
+            pid_dict[hexa] = value.strip()
+
+        if hex_pck[40:44] in pid_dict:
+            return pid_dict[hex_pck[40:44]]
+        else:
+            return 'Unknown protocol'
 
 
 # find correct protocol IEEE 802.3 LLC
 def findSap(hex_pck):
+    # https://www.tutorialspoint.com/How-to-create-a-Python-dictionary-from-text-file
+    sap_dict = {}
+    with open("Protocols/l2.txt") as file:
+        for line in file:
+            (hexa, value) = line.split("=")
+            sap_dict[hexa] = value.strip()
+
     if int(hex_pck[28:30], 16) == int(hex_pck[30:32], 16):
-        if int(hex_pck[28:30], 16) == 0x42:
-            return 'STP'
-        elif int(hex_pck[28:30], 16) == 0xE0:
-            return 'IPX'
-        elif int(hex_pck[28:30], 16) == 0xF0:
-            return 'NETBIOS'
-        elif int(hex_pck[28:30], 16) == 0x00:
-            return 'Null SAP'
-        elif int(hex_pck[28:30], 16) == 0x02:
-            return 'LLC Sublayer Management/Individual'
-        elif int(hex_pck[28:30], 16) == 0x03:
-            return 'LLC Sublayer Management/Group'
-        elif int(hex_pck[28:30], 16) == 0x06:
-            return 'IP (DoD Internet Protocol)'
-        elif int(hex_pck[28:30], 16) == 0x0E:
-            return 'PROWAY (IEC 955) Network Management, Maintenance and Installation'
-        elif int(hex_pck[28:30], 16) == 0x4E:
-            return 'MMS'
-        elif int(hex_pck[28:30], 16) == 0x5E:
-            return 'ISI IP'
-        elif int(hex_pck[28:30], 16) == 0x7E:
-            return 'X.25 PLP (ISO 8208)'
-        elif int(hex_pck[28:30], 16) == 0x8E:
-            return 'PROWAY (IEC 955) Active Station List Maintenance'
-        elif int(hex_pck[28:30], 16) == 0xF4:
-            return 'LAN Management'
-        elif int(hex_pck[28:30], 16) == 0xFE:
-            return 'ISO Network Layer Protocols'
+        if hex_pck[28:30] in sap_dict:
+            return sap_dict[hex_pck[28:30]]
         else:
             return 'Unknown protocol'
     else:
@@ -174,4 +156,4 @@ def listOfFrames(file_name):
 
 
 if __name__ == '__main__':
-    listOfFrames('trace-25.pcap')
+    listOfFrames('trace-26.pcap')
