@@ -171,18 +171,15 @@ def createMaxIPSenderValueList(src_ip_dict, max_counter):
     return most_packets_list
 
 
-# list frames into yaml, main logic
-def listOfFrames(file_name):
-    file = rdpcap('../vzorky_pcap_na_analyzu/' + file_name)
-
-    pck_list = []
-    src_ip_dict = {}
-    yaml_format = ruamel.yaml.YAML()
+def createPacketList(file, yaml_format):
+    pck_frames_list = []
 
     dict_l2 = getDictl("Protocols/l2.txt")
     dict_l3 = getDictl("Protocols/l3.txt")
     dict_l4 = getDictl("Protocols/l4.txt")
     dict_l5 = getDictl("Protocols/l5.txt")
+
+    ipv4_ip_dict = {}
 
     for frame_num, pck in enumerate(file, start=0):
 
@@ -213,7 +210,7 @@ def listOfFrames(file_name):
                 if protocol == "TCP" or protocol == "UDP":
                     src_port, app_protocol = findPort(hex_pck, "src", dict_l5)
                     dst_port, app_protocol = findPort(hex_pck, "dst", dict_l5)
-                addIPSender(src_ip_dict, src_ip)
+                addIPSender(ipv4_ip_dict, src_ip)
         else:
             if int(hex_pck[28:32], 16) == 0xFFFF:
                 define_frame_type = 'IEEE 802.3 RAW'
@@ -247,7 +244,16 @@ def listOfFrames(file_name):
         )
 
         yaml_format.register_class(Packet)
-        pck_list.append(pck_data)
+        pck_frames_list.append(pck_data)
+    return pck_frames_list, ipv4_ip_dict
+
+
+# list frames into yaml, main logic
+def listOfFramesToYaml(file_name):
+    file = rdpcap('../vzorky_pcap_na_analyzu/' + file_name)
+    yaml_format = ruamel.yaml.YAML()
+
+    pck_list, src_ip_dict = createPacketList(file, yaml_format)
 
     senders_list, max_counter = createSenderListWithMaxValue(src_ip_dict)
     max_packets = createMaxIPSenderValueList(src_ip_dict, max_counter)
@@ -275,4 +281,4 @@ def listOfFrames(file_name):
 
 
 if __name__ == '__main__':
-    listOfFrames('trace-27.pcap')
+    listOfFramesToYaml('trace-27.pcap')
