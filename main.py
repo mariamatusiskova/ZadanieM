@@ -32,16 +32,18 @@ class Packet:
 def findPort(hex_pck, address_type, dictl):
     IP_length_header = (int(hex_pck[29], 16) * 4 * 2) - (20 * 2)
     if address_type == "src":
-        return int(hex_pck[(68 + IP_length_header):(72 + IP_length_header)], 16), findProtocolPort(hex_pck, dictl, (68 + IP_length_header), (72 + IP_length_header))
+        return int(hex_pck[(68 + IP_length_header):(72 + IP_length_header)], 16), findProtocolPort(hex_pck, dictl, (
+                    68 + IP_length_header), (72 + IP_length_header))
     elif address_type == "dst":
-        return int(hex_pck[(72 + IP_length_header):(76 + IP_length_header)], 16), findProtocolPort(hex_pck, dictl, (72 + IP_length_header), (76 + IP_length_header))
+        return int(hex_pck[(72 + IP_length_header):(76 + IP_length_header)], 16), findProtocolPort(hex_pck, dictl, (
+                    72 + IP_length_header), (76 + IP_length_header))
 
 
 def convertToIP(IP_address):
     address = ""
     len_IP = 0
     for i in range(0, len(IP_address), 2):
-        address += str(int(IP_address[i:i+2], 16))
+        address += str(int(IP_address[i:i + 2], 16))
         len_IP += 2
         if len_IP < (len(IP_address) - 1):
             address += "."
@@ -139,11 +141,42 @@ def checkISLHeader(hex_pck):
         return hex_pck
 
 
+def addIPSender(dictionary, key):
+    if key in dictionary:
+        dictionary[key] += 1
+    else:
+        dictionary[key] = 1
+
+
+def createSenderListWithMaxValue(dictionary):
+    ip_list = []
+    find_highest_value = 0
+    for sender in dictionary:
+        senders_data = Packet(
+            node=sender,
+            number_of_sent_packets=dictionary[sender]
+        )
+        ip_list.append(senders_data)
+
+        if dictionary[sender] > find_highest_value:
+            find_highest_value = dictionary[sender]
+    return ip_list, find_highest_value
+
+
+def createMaxIPSenderValueList(src_ip_dict, max_counter):
+    most_packets_list = []
+    for max_values in src_ip_dict:
+        if src_ip_dict[max_values] == max_counter:
+            most_packets_list.append(max_values)
+    return most_packets_list
+
+
 # list frames into yaml, main logic
 def listOfFrames(file_name):
     file = rdpcap('../vzorky_pcap_na_analyzu/' + file_name)
 
     pck_list = []
+    src_ip_dict = {}
     yaml_format = ruamel.yaml.YAML()
 
     dict_l2 = getDictl("Protocols/l2.txt")
@@ -174,11 +207,13 @@ def listOfFrames(file_name):
             ether_type = findProtocol(hex_pck, dict_l3, 24, 28)
             src_ip = findIPAddresses(hex_pck, "src", ether_type)
             dst_ip = findIPAddresses(hex_pck, "dst", ether_type)
+
             if ether_type == "IPv4":
                 protocol = findProtocol(hex_pck, dict_l4, 46, 48)
                 if protocol == "TCP" or protocol == "UDP":
                     src_port, app_protocol = findPort(hex_pck, "src", dict_l5)
                     dst_port, app_protocol = findPort(hex_pck, "dst", dict_l5)
+                addIPSender(src_ip_dict, src_ip)
         else:
             if int(hex_pck[28:32], 16) == 0xFFFF:
                 define_frame_type = 'IEEE 802.3 RAW'
@@ -214,11 +249,16 @@ def listOfFrames(file_name):
         yaml_format.register_class(Packet)
         pck_list.append(pck_data)
 
+    senders_list, max_counter = createSenderListWithMaxValue(src_ip_dict)
+    max_packets = createMaxIPSenderValueList(src_ip_dict, max_counter)
+
     # data
     header = {
         "name": "PKS2023/24",
         "pcap_name": file_name,
-        "packets": pck_list
+        "packets": pck_list,
+        "ipv4_senders": senders_list,
+        "max_send_packets_by": max_packets
     }
 
     # write to the file all data
@@ -235,4 +275,4 @@ def listOfFrames(file_name):
 
 
 if __name__ == '__main__':
-    listOfFrames('trace-25.pcap')
+    listOfFrames('trace-27.pcap')
