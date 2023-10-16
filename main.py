@@ -4,39 +4,27 @@ from scapy.all import *
 from binascii import hexlify
 import ruamel.yaml
 
+import arpFilter
+import tcpFilter
+from packet import Packet
 
 # yaml format through the class
 # https://yaml.readthedocs.io/en/latest/dumpcls.html
-class Packet:
-    # tag for remove the '!'
-    yaml_tag = u'tag:yaml.org,2002:map'
+from tcpFilter import getProtocolList
 
-    # kwargs for various length of properties
-    def __init__(self, **kwargs):
-        self.kwargs = kwargs
 
-    # data to yaml
-    @classmethod
-    def to_yaml(cls, representer, node):
-        for key, value in list(node.kwargs.items()):
-            if value is None:
-                node.kwargs.pop(key)
-        return representer.represent_mapping(cls.yaml_tag, node.kwargs)
-
-    @classmethod
-    def from_yaml(cls, constructor, node):
-        data = constructor.construct_mapping(node, deep=True)
-        return cls(**data)
+def bitShift(hex_pck):
+    return (int(hex_pck[29], 16) * 4 * 2) - (20 * 2)
 
 
 def findPort(hex_pck, address_type, dictl):
-    IP_length_header = (int(hex_pck[29], 16) * 4 * 2) - (20 * 2)
+    IP_length_header = bitShift(hex_pck)
     if address_type == "src":
         return int(hex_pck[(68 + IP_length_header):(72 + IP_length_header)], 16), findProtocolPort(hex_pck, dictl, (
-                    68 + IP_length_header), (72 + IP_length_header))
+                68 + IP_length_header), (72 + IP_length_header))
     elif address_type == "dst":
         return int(hex_pck[(72 + IP_length_header):(76 + IP_length_header)], 16), findProtocolPort(hex_pck, dictl, (
-                    72 + IP_length_header), (76 + IP_length_header))
+                72 + IP_length_header), (76 + IP_length_header))
 
 
 def convertToIP(IP_address):
@@ -141,7 +129,7 @@ def checkISLHeader(hex_pck):
         return hex_pck
 
 
-def addIPSender(dictionary, key):
+def  addIPSender(dictionary, key):
     if key in dictionary:
         dictionary[key] += 1
     else:
@@ -171,17 +159,40 @@ def createMaxIPSenderValueList(src_ip_dict, max_counter):
     return most_packets_list
 
 
-def createPacketList(file, yaml_format):
+def printProtocolsList(protocols_list):
+    print('These protocols are supported:')
+    print(" - ".join(protocols_list))
+
+
+def getProtocolInput():
+    protocols_list = ["HTTP", "HTTPS", "TELNET", "SSH", "FTP-CONTROL", "FTP-DATA", "ICMP", "TFTP", "ARP"]
+
+    while True:
+        printProtocolsList(protocols_list)
+        protocol = input("Please type the protocol to analyze:").upper().strip()
+
+        if protocol in protocols_list:
+            return protocol
+        else:
+            print('Sorry, unknown protocol. Try again.')
+
+
+def createFilterList(pck_list, file_name):
+    protocol = getProtocolInput()
+
+    if protocol == "ARP":
+        arpFilter.getProtocolList(pck_list, protocol, file_name)
+    elif protocol == "ICMP" or protocol == "TFTP":
+        pass
+    else:
+        tcpFilter.getProtocolList(pck_list, protocol, file_name)
+
+
+def createPacketList(file, yaml_format, dict_l2, dict_l3, dict_l4, dict_l5):
     pck_frames_list = []
-
-    dict_l2 = getDictl("Protocols/l2.txt")
-    dict_l3 = getDictl("Protocols/l3.txt")
-    dict_l4 = getDictl("Protocols/l4.txt")
-    dict_l5 = getDictl("Protocols/l5.txt")
-
     ipv4_ip_dict = {}
 
-    for frame_num, pck in enumerate(file, start=0):
+    for frame_num, pck in enumerate(file, start=1):
 
         # transform code to raw data of wireshark
         # hexlify bytes and convert them to the string
@@ -253,7 +264,12 @@ def listOfFramesToYaml(file_name):
     file = rdpcap('../vzorky_pcap_na_analyzu/' + file_name)
     yaml_format = ruamel.yaml.YAML()
 
-    pck_list, src_ip_dict = createPacketList(file, yaml_format)
+    dict_l2 = getDictl("Protocols/l2.txt")
+    dict_l3 = getDictl("Protocols/l3.txt")
+    dict_l4 = getDictl("Protocols/l4.txt")
+    dict_l5 = getDictl("Protocols/l5.txt")
+
+    pck_list, src_ip_dict = createPacketList(file, yaml_format, dict_l2, dict_l3, dict_l4, dict_l5)
 
     senders_list, max_counter = createSenderListWithMaxValue(src_ip_dict)
     max_packets = createMaxIPSenderValueList(src_ip_dict, max_counter)
@@ -268,16 +284,18 @@ def listOfFramesToYaml(file_name):
     }
 
     # write to the file all data
-    with open('yaml_file.yaml', 'w') as yaml_file:
+    with open('packet-all.yaml', 'w') as yaml_file:
         yaml_format.indent(offset=2, sequence=4)
         yaml_format.dump(header, yaml_file)
 
     # replace '|-' to '|'
-    with open('yaml_file.yaml', 'r') as f:
+    with open('packet-all.yaml', 'r') as f:
         content = f.read()
     content = content.replace("|-\n", "|\n")
-    with open('yaml_file.yaml', 'w') as f:
+    with open('packet-all.yaml', 'w') as f:
         f.write(content)
+
+    createFilterList(pck_list, file_name)
 
 
 if __name__ == '__main__':
