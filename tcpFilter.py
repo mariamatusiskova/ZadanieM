@@ -47,9 +47,9 @@ def isComplete(open_num, finish_num, group_list, first_incomplete):
 
 
 
-def checkFinishFlags(binary_data, comm_list, frame_num, counter):
-    if comm_list:
-        flag_list = comm_list.copy()
+def checkFinishFlags(binary_data, end_list, frame_num, counter):
+    if end_list:
+        flag_list = end_list.copy()
     else:
         flag_list = []
 
@@ -66,18 +66,18 @@ def checkFinishFlags(binary_data, comm_list, frame_num, counter):
         flag_list.append(fin)
         count_flags += 1
     # SYN
-    elif int(binary_data[-2]) == 1:
+    if int(binary_data[-2]) == 1:
         flag_list.append(syn)
         count_flags += 1
     # RST
-    elif int(binary_data[-3]) == 1:
+    if int(binary_data[-3]) == 1:
         flag_list.append(rst)
         count_flags += 1
     # PSH
-    elif int(binary_data[-4]) == 1:
+    if int(binary_data[-4]) == 1:
         count_flags += 1
     # ACK
-    elif int(binary_data[-5]) == 1:
+    if int(binary_data[-5]) == 1:
         flag_list.append(ack)
         count_flags += 1
 
@@ -93,16 +93,16 @@ def checkFinishFlags(binary_data, comm_list, frame_num, counter):
         pck_num = frame_num - counter
         counter = 0
         return pck_num, finishing_list.clear(), counter
-    elif (len(finishing_list) == 6 and (finishing_list[0:6] != ["FIN", "ACK", "ACK", "FIN", "ACK", "ACK"] or finishing_list[0:6] != ["FIN", "ACK", "FIN", "ACK", "ACK", "ACK"])) or counter == 3 and (len(finishing_list) == 5 and finishing_list[0:5] != ["FIN", "ACK", "ACK", "RST", "ACK"]):
+    elif len(finishing_list) == 6 and (finishing_list[0:6] != ["FIN", "ACK", "ACK", "FIN", "ACK", "ACK"]) or (len(finishing_list) == 6 and finishing_list[0:6] != ["FIN", "ACK", "FIN", "ACK", "ACK", "ACK"]):
         counter = 0
         return -1, finishing_list.clear(), counter
     else:
         return -1, finishing_list, counter
 
 
-def checkStartFlags(binary_data, comm_list, frame_num, counter):
-    if comm_list:
-        flag_list = comm_list.copy()
+def checkStartFlags(binary_data, start_list, frame_num, counter):
+    if start_list:
+        flag_list = start_list.copy()
     else:
         flag_list = []
 
@@ -119,17 +119,17 @@ def checkStartFlags(binary_data, comm_list, frame_num, counter):
         flag_list.append(fin)
         count_flags += 1
     # SYN
-    elif int(binary_data[-2]) == 1:
+    if int(binary_data[-2]) == 1:
         flag_list.append(syn)
         count_flags += 1
     # RST
-    elif int(binary_data[-3]) == 1:
+    if int(binary_data[-3]) == 1:
         count_flags += 1
     # PSH
-    elif int(binary_data[-4]) == 1:
+    if int(binary_data[-4]) == 1:
         count_flags += 1
     # ACK
-    elif int(binary_data[-5]) == 1:
+    if int(binary_data[-5]) == 1:
         flag_list.append(ack)
         count_flags += 1
 
@@ -208,6 +208,7 @@ def getProtocolList(packet_list, protocol, file_name):
     in_comm_list = []
     count_communications = 0
     for group in groups_list:
+        open_comm_record = -1
         src_comm = None
         dst_comm = None
         count_packets = 0
@@ -215,7 +216,7 @@ def getProtocolList(packet_list, protocol, file_name):
             count_packets += 1
             hex_pck = parseHexData(packet.kwargs['hexa_frame'])
             bin_shift = (int(hex_pck[29], 16) * 4 * 2) - (20 * 2)
-            binary_data = bin(int(hex_pck[93 + bin_shift: 96 + bin_shift], 16))
+            binary_data = "{0:08b}".format(int(hex_pck[93 + bin_shift: 96 + bin_shift], 16))
 
             if count_packets == 1:
                 src_comm = packet.kwargs['src_ip']
@@ -224,28 +225,34 @@ def getProtocolList(packet_list, protocol, file_name):
             open_comm, start, counter_start = checkStartFlags(binary_data, start, packet.kwargs['frame_number'], counter_start)
             finish_comm, end, counter_finish = checkFinishFlags(binary_data, end, packet.kwargs['frame_number'], counter_finish)
 
+            if open_comm > -1:
+                open_comm_record = open_comm
+
+            if open_comm_record > -1 and finish_comm > -1:
+                final_group_list, status = isComplete(open_comm_record, finish_comm, group, count_incomplete)
+
+                if final_group_list and status == "complete":
+                    count_communications += 1
+
+                    comm_data = Packet(
+                        number_comm=count_communications,
+                        src_comm=src_comm,
+                        dst_comm=dst_comm,
+                        packets=final_group_list
+                    )
+                    yaml_format.register_class(Packet)
+                    comm_list.append(comm_data)
+                open_comm_record = 0
+
         final_group_list, status = isComplete(open_comm, finish_comm, group, count_incomplete)
 
-        if final_group_list and status == "complete":
-            count_communications += 1
-
-            comm_data = Packet(
-                number_comm=count_communications,
-                src_comm=src_comm,
-                dst_comm=dst_comm,
-                packets=final_group_list
-            )
-
-            yaml_format.register_class(Packet)
-            comm_list.append(comm_data)
-        elif final_group_list and status == "incomplete":
+        if final_group_list and status == "incomplete":
             count_incomplete += 1
             if count_incomplete == 1:
                 comm_data = Packet(
                     number_comm=count_incomplete,
                     packets=final_group_list
                 )
-
                 yaml_format.register_class(Packet)
                 in_comm_list.append(comm_data)
 

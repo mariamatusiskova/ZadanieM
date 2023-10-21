@@ -5,6 +5,7 @@ from binascii import hexlify
 import ruamel.yaml
 
 import arpFilter
+import dnsFiltering
 import tcpFilter
 from packet import Packet
 
@@ -73,23 +74,7 @@ def findProtocol(hex_pck, dict_protocol, position_from, position_to):
     if (hex_pck[position_from:position_to]).upper() in dict_protocol:
         return dict_protocol[(hex_pck[position_from:position_to]).upper()]
     else:
-        return 'Unknown protocol'
-
-
-# # find correct protocol for IEEE 802.3 LLC & SNAP
-# def findPid(hex_pck):
-#     # https://www.tutorialspoint.com/How-to-create-a-Python-dictionary-from-text-file
-#     pid_dict = {}
-#     with open("Protocols/l3.txt") as file:
-#         for line in file:
-#             (hexa, value) = line.split("=")
-#             pid_dict[hexa] = value.strip()
-#
-#         if hex_pck[40:44] in pid_dict:
-#             return pid_dict[hex_pck[40:44]]
-#         else:
-#             return 'Unknown protocol'
-
+        return None
 
 # find correct protocol IEEE 802.3 LLC
 def findSap(hex_pck, dict_protocol):
@@ -98,9 +83,9 @@ def findSap(hex_pck, dict_protocol):
         if (hex_pck[28:30]).upper() in dict_protocol:
             return dict_protocol[(hex_pck[28:30]).upper()]
         else:
-            return 'Unknown protocol'
+            return None
     else:
-        return 'Unknown protocol'
+        return None
 
 
 # transform to hex data of the packet
@@ -165,7 +150,7 @@ def printProtocolsList(protocols_list):
 
 
 def getProtocolInput():
-    protocols_list = ["HTTP", "HTTPS", "TELNET", "SSH", "FTP-CONTROL", "FTP-DATA", "ICMP", "TFTP", "ARP"]
+    protocols_list = ["HTTP", "HTTPS", "TELNET", "SSH", "FTP-CONTROL", "FTP-DATA", "ICMP", "TFTP", "ARP", "DNS"]
 
     while True:
         printProtocolsList(protocols_list)
@@ -182,6 +167,8 @@ def createFilterList(pck_list, file_name):
 
     if protocol == "ARP":
         arpFilter.getProtocolList(pck_list, protocol, file_name)
+    elif protocol == "DNS":
+        dnsFiltering.getProtocolListDNS(pck_list, protocol, file_name)
     elif protocol == "ICMP" or protocol == "TFTP":
         pass
     else:
@@ -208,7 +195,8 @@ def createPacketList(file, yaml_format, dict_l2, dict_l3, dict_l4, dict_l5):
         protocol = None
         src_port = None
         dst_port = None
-        app_protocol = None
+        app_protocol_src = None
+        app_protocol_dst = None
 
         if int(hex_pck[24:28], 16) >= 0x5DC:
             define_frame_type = 'Ethernet II'
@@ -219,8 +207,8 @@ def createPacketList(file, yaml_format, dict_l2, dict_l3, dict_l4, dict_l5):
             if ether_type == "IPv4":
                 protocol = findProtocol(hex_pck, dict_l4, 46, 48)
                 if protocol == "TCP" or protocol == "UDP":
-                    src_port, app_protocol = findPort(hex_pck, "src", dict_l5)
-                    dst_port, app_protocol = findPort(hex_pck, "dst", dict_l5)
+                    src_port, app_protocol_src = findPort(hex_pck, "src", dict_l5)
+                    dst_port, app_protocol_dst = findPort(hex_pck, "dst", dict_l5)
                 addIPSender(ipv4_ip_dict, src_ip)
         else:
             if int(hex_pck[28:32], 16) == 0xFFFF:
@@ -250,7 +238,7 @@ def createPacketList(file, yaml_format, dict_l2, dict_l3, dict_l4, dict_l5):
             protocol=protocol,
             src_port=src_port,
             dst_port=dst_port,
-            app_protocol=app_protocol,
+            app_protocol=app_protocol_src or app_protocol_dst,
             hexa_frame=scalarstring.PreservedScalarString(printHexData(hex_pck))
         )
 
@@ -299,4 +287,4 @@ def listOfFramesToYaml(file_name):
 
 
 if __name__ == '__main__':
-    listOfFramesToYaml('trace-27.pcap')
+    listOfFramesToYaml('trace-6.pcap')

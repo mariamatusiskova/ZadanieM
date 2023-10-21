@@ -80,9 +80,29 @@ def connectGroups(request_list, reply_list):
                             groups_list.append(communicating_pcks)
 
                     elif req_pck.kwargs['arp_opcode'] == "REQUEST":
-                        only_request_list.append(req_pck)
+
+                        request_group = [req_pck]
+
+                        exists = False
+                        for group in only_request_list:
+                            if set(request_group) == set(group):
+                                exists = True
+                                break
+
+                        if not exists:
+                            only_request_list.append(request_group)
+
                     elif rep_pck.kwargs['arp_opcode'] == "REPLY":
-                        only_reply_list.append(rep_pck)
+                        reply_group = [rep_pck]
+
+                        exists = False
+                        for group in only_reply_list:
+                            if set(reply_group) == set(group):
+                                exists = True
+                                break
+
+                        if not exists:
+                            only_reply_list.append(reply_group)
 
     return groups_list, only_request_list, only_reply_list
 
@@ -119,6 +139,7 @@ def getProtocolList(packet_list, protocol, file_name):
                     kwargs_dict['arp_opcode'] = comm
             pck.kwargs = kwargs_dict
 
+
     filtered_request_list = filterGroup(request_list)
     filtered_reply_list = filterGroup(reply_list)
 
@@ -150,7 +171,7 @@ def getProtocolList(packet_list, protocol, file_name):
         count_in_communications += 1
         comm_data = Packet(
             number_comm=count_in_communications,
-            packets=request
+            packets=reply
         )
         yaml_format.register_class(Packet)
         in_comm_list.append(comm_data)
