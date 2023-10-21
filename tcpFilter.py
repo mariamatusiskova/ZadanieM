@@ -99,6 +99,10 @@ def checkFinishFlags(binary_data, end_list, frame_num, counter, group):
     if checkFullValidEnd(counter, finishing_list, rst):
         pck_num = frame_num
         counter = 0
+        if rst:
+            if frame_num == group[len(group) - 1].kwargs['frame_number']:
+                return pck_num, finishing_list.clear(), counter
+            return pck_num + 1, finishing_list.clear(), counter
         return pck_num, finishing_list.clear(), counter
     elif checkFullValidShorterEnd(counter, finishing_list, frame_num, group):
         pck_num = frame_num
