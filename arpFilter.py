@@ -1,5 +1,7 @@
 import ruamel.yaml
 from collections import OrderedDict
+
+from pair import Pair
 from packet import Packet
 
 
@@ -54,7 +56,39 @@ def filterGroup(filter_list):
     return groups_list
 
 
-#
+def isOnlyRequest(req_pck, groups_list):
+    val = True
+    for pcks in groups_list.values():
+        for pck in pcks:
+            if req_pck == pck:
+                val = False
+                break
+    return req_pck.kwargs['arp_opcode'] == "REQUEST" and val
+
+
+def isOnlyReply(rep_pck, groups_list):
+    val = True
+    if groups_list:
+        for pcks in groups_list.values():
+            for pck in pcks:
+                if rep_pck == pck:
+                    val = False
+                    break
+    return rep_pck.kwargs['arp_opcode'] == "REPLY" and val
+
+def IPSort(groups_list):
+    sorted_group_dict = {}
+    for groups in groups_list:
+        ip1 = groups[0].kwargs['src_ip']
+        ip2 = groups[0].kwargs['dst_ip']
+        pair = Pair(ip1, ip2)
+        if pair in sorted_group_dict.keys():
+            sorted_group_dict[pair].extend(groups)
+        else:
+            sorted_group_dict[pair] = groups
+
+    return sorted_group_dict
+
 
 def connectGroups(request_list, reply_list):
     groups_list = []
@@ -69,7 +103,7 @@ def connectGroups(request_list, reply_list):
                         # Create a list to store communicating packets
                         communicating_pcks = [req_pck, rep_pck]
 
-                        # Check if this group already exists in groups_list
+                        # Check if this group already exists in the groups_list
                         exists = False
                         for group in groups_list:
                             if set(communicating_pcks) == set(group):
@@ -79,30 +113,68 @@ def connectGroups(request_list, reply_list):
                         if not exists:
                             groups_list.append(communicating_pcks)
 
-                    elif req_pck.kwargs['arp_opcode'] == "REQUEST":
+    groups_list = IPSort(groups_list)
 
-                        request_group = [req_pck]
+    # for req_pcks in request_list:
+    #     for rep_pcks in reply_list:
+    #         for req_pck in req_pcks:
+    #             for rep_pck in rep_pcks:
+    #
+    #                 if isOnlyRequest(req_pck, groups_list):
+    #
+    #                     request_group = [req_pck]
+    #
+    #                     exists = False
+    #                     for group in only_request_list:
+    #                         if set(request_group) == set(group):
+    #                             exists = True
+    #                             break
+    #
+    #                     if not exists:
+    #                         only_request_list.append(request_group)
+    #
+    #                 if isOnlyReply(rep_pck, groups_list):
+    #                     reply_group = [rep_pck]
+    #
+    #                     exists = False
+    #                     for group in only_reply_list:
+    #                         if set(reply_group) == set(group):
+    #                             exists = True
+    #                             break
+    #
+    #                     if not exists:
+    #                         only_reply_list.append(reply_group)
 
-                        exists = False
-                        for group in only_request_list:
-                            if set(request_group) == set(group):
-                                exists = True
-                                break
+    for req_pcks in request_list:
+        for req_pck in req_pcks:
 
-                        if not exists:
-                            only_request_list.append(request_group)
+            if isOnlyRequest(req_pck, groups_list):
 
-                    elif rep_pck.kwargs['arp_opcode'] == "REPLY":
-                        reply_group = [rep_pck]
+                request_group = [req_pck]
 
-                        exists = False
-                        for group in only_reply_list:
-                            if set(reply_group) == set(group):
-                                exists = True
-                                break
+                exists = False
+                for group in only_request_list:
+                    if set(request_group) == set(group):
+                        exists = True
+                        break
 
-                        if not exists:
-                            only_reply_list.append(reply_group)
+                if not exists:
+                    only_request_list.append(request_group)
+
+    for rep_pcks in reply_list:
+        for rep_pck in rep_pcks:
+
+            if isOnlyReply(rep_pck, groups_list):
+                reply_group = [rep_pck]
+
+                exists = False
+                for group in only_reply_list:
+                    if set(reply_group) == set(group):
+                        exists = True
+                        break
+
+                if not exists:
+                    only_reply_list.append(reply_group)
 
     return groups_list, only_request_list, only_reply_list
 
@@ -147,31 +219,27 @@ def getProtocolList(packet_list, protocol, file_name):
 
     count_communications = 0
     comm_list = []
-    for group in connected_group:
+    for group in connected_group.values():
         count_communications += 1
         comm_data = Packet(
             number_comm=count_communications,
-            packets=group
+            packets=checkList(group)
         )
         yaml_format.register_class(Packet)
         comm_list.append(comm_data)
 
     count_in_communications = 0
+    concatenated_lists = []
+    request_group = sorted(request_group, key=lambda packet: packet[0].kwargs['frame_number'])
+    reply_group = sorted(reply_group, key=lambda packet: packet[0].kwargs['frame_number'])
+    for sublist in request_group + reply_group:
+        concatenated_lists.extend(sublist)
     in_comm_list = []
-    for request in request_group:
+    if concatenated_lists:
         count_in_communications += 1
         comm_data = Packet(
             number_comm=count_in_communications,
-            packets=request
-        )
-        yaml_format.register_class(Packet)
-        in_comm_list.append(comm_data)
-
-    for reply in reply_group:
-        count_in_communications += 1
-        comm_data = Packet(
-            number_comm=count_in_communications,
-            packets=reply
+            packets=checkList(concatenated_lists)
         )
         yaml_format.register_class(Packet)
         in_comm_list.append(comm_data)

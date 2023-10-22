@@ -287,4 +287,4 @@ def listOfFramesToYaml(file_name):
 
 
 if __name__ == '__main__':
-    listOfFramesToYaml('trace-6.pcap')
+    listOfFramesToYaml('trace-27.pcap')
